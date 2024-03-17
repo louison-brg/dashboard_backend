@@ -1,22 +1,62 @@
 api_key = "AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw"
 from googleapiclient.discovery import build
+
 youtube = build('youtube', 'v3', developerKey=api_key)
-"""
-requestVid = youtube.search().list(q="avengers",part="snippet",type="video",maxResults=50)
-resultVid = requestVid.execute()
-for video in resultVid['items']:
-    print(video['snippet']['title'])
-"""
-rechercheNomChaine = input("Quelle chaine YT cherches-tu ?\n")
-requestChannel = youtube.search().list(q=rechercheNomChaine,part="snippet",type='channel',maxResults=1)
-resultChannel = requestChannel.execute()
+#channelName = input("Quelle chaine YT cherches-tu ?\n")
+def getCreatorInfos(channelName):
+    requestChannelName = youtube.search().list(q=channelName, part="snippet", type='channel', maxResults=1)
+    resultChannel = requestChannelName.execute()
+    channel_info = {}
 
-for channel in resultChannel['items']:
-    print(channel['snippet'])
-    print("Date de création: ",channel['snippet']['publishedAt']) #Date de création
-    print("Créateur: ",channel['snippet']['title'])#Nom du créateur
-    print("Description: ",channel['snippet']['description'])#Description de la chaine --> PROBLEME : ON A PAS LA DESCRIPTION ENTIERE
-    print("ID : ",channel['snippet']['channelId'])#ID de la chaine (je ne sais pas si ça sera utile)
-    print("PP: ",channel['snippet']['thumbnails']['default']['url'])#Lien vers la photo de profile
+    for channel in resultChannel['items']:
+        channel_info["channelDateOfCreation"] = channel['snippet']['publishedAt']
+        channel_info["channelName"] = channel['snippet']['title']
+        channel_info["channelDescription"] = channel['snippet']['description']
+        channel_info["channelId"] = channel['snippet']['channelId']
+        channel_info["channelProfilePicLink"] = channel['snippet']['thumbnails']['default']['url']
+
+    return channel_info
+
+creator_info = getCreatorInfos('squeezie')
+print("Date de création de la chaîne:", creator_info["channelDateOfCreation"])
+print("Nom de la chaîne:", creator_info["channelName"])
+print("Description de la chaîne:", creator_info["channelDescription"])
+print("ID de la chaîne:", creator_info["channelId"])
+print("Lien vers la photo de profil de la chaîne:", creator_info["channelProfilePicLink"])
 
 
+def getLatestPosts(channelId, max_posts=3):
+    requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=50)
+    responseLatestPosts = requestLatestPosts.execute()
+    countUpload = 0
+    latest_posts = []
+
+    for video in responseLatestPosts['items']:
+        if countUpload == max_posts:
+            break
+        if video['snippet']['type'] != 'upload':
+            pass
+        else:
+            post_info = {}
+            post_info["postDate"] = video['snippet']['publishedAt']
+            post_info["postTitle"] = video['snippet']['title']
+            post_info["postPicture"] = video['snippet']['thumbnails']['standard']['url']
+            post_info["postStats"] = get_video_statistics(video['contentDetails']['upload']['videoId'])
+            latest_posts.append(post_info)
+            countUpload += 1
+    return latest_posts
+
+def get_video_statistics(video_id):
+    request = youtube.videos().list(
+        part="statistics",
+        id=video_id
+    )
+    response = request.execute()
+    return response['items'][0]['statistics']
+
+latest_posts = getLatestPosts(channelId=creator_info["channelId"], max_posts=3)
+for post in latest_posts:
+    print("Moment de parution:", post["postDate"])
+    print("Titre:", post["postTitle"])
+    print("Miniature:", post["postPicture"])
+    print("Statistiques de la vidéo:", post["postStats"])
