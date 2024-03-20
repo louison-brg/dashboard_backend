@@ -66,7 +66,6 @@ def formatDate(date):
     return dateFormatee
 
 
-
 creator_info = getCreatorInfos('misterjday')
 print("Nom de la chaîne:", creator_info.get("channelName", "N/A"))
 print("Date de création de la chaîne:", creator_info.get("channelDateOfCreation", "N/A"))
