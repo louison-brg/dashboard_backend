@@ -65,8 +65,9 @@ def formatDate(date):
     dateFormatee = dateObj.strftime("%d/%m/%Y")
     return dateFormatee
 
-
-creator_info = getCreatorInfos('misterjday')
+nomCreateur = input("Entrez un nom de créateur :\n")
+print(30*"=","Créateur",30*"=","\n")
+creator_info = getCreatorInfos(nomCreateur)
 print("Nom de la chaîne:", creator_info.get("channelName", "N/A"))
 print("Date de création de la chaîne:", creator_info.get("channelDateOfCreation", "N/A"))
 print("Description de la chaîne:", creator_info.get("channelDescription", "N/A"))
@@ -74,7 +75,7 @@ print("Lien vers la photo de profil de la chaîne:", creator_info.get("channelPr
 print("Nombre de vues totales de la chaîne:", creator_info.get("viewCount", "N/A"))
 print("Nombre total d'abonnés à la chaîne:", creator_info.get("subscriberCount", "N/A"))
 print("Nombre total de vidéos mises en ligne:", creator_info.get("videoCount", "N/A"))
-print(50*"=","\n")
+print("\n",30*"=","3 Derniers Post",30*"=","\n")
 
 
 latest_posts = getLatestPosts(channelId=creator_info["channelId"], max_posts=3)
@@ -85,6 +86,4 @@ for post in latest_posts:
     print("Vues:", post["postViews"])
     print("Likes:", post["postLikes"])
     print("Comments:", post["postComments"],'\n')
-
-
-
+    print(60 * "=", "\n")
