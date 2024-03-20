@@ -1,6 +1,11 @@
+from selenium.common import NoSuchElementException
+
 api_key = "AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw"
 from googleapiclient.discovery import build
 from datetime import datetime
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
 youtube = build('youtube', 'v3', developerKey=api_key)
 
@@ -13,6 +18,7 @@ def getCreatorInfos(channelName):
 
         channel_info["channelDateOfCreation"] = formatDate(channel['snippet']['publishedAt'])
         channel_info["channelName"] = channel['snippet']['title']
+        nameYtber=channel_info["channelName"]
         channel_info["channelDescription"] = channel['snippet']['description']
         channel_info["channelId"] = channel['snippet']['channelId']
         channel_info["channelProfilePicLink"] = channel['snippet']['thumbnails']['default']['url']
@@ -29,7 +35,7 @@ def getCreatorInfos(channelName):
             channel_info["likes"] = resultStats['items'][0]['statistics'].get('likeCount', 0)
             channel_info["uploads"] = resultStats['items'][0]['statistics'].get('uploadCount', 0)
 
-    return channel_info
+    return channel_info, nameYtber
 def getLatestPosts(channelId, max_posts=3):
     requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=50)
     responseLatestPosts = requestLatestPosts.execute()
@@ -67,7 +73,7 @@ def formatDate(date):
 
 nomCreateur = input("Entrez un nom de créateur :\n")
 print(30*"=","Créateur",30*"=","\n")
-creator_info = getCreatorInfos(nomCreateur)
+creator_info, nameYtber = getCreatorInfos(nomCreateur)
 print("Nom de la chaîne:", creator_info.get("channelName", "N/A"))
 print("Date de création de la chaîne:", creator_info.get("channelDateOfCreation", "N/A"))
 print("Description de la chaîne:", creator_info.get("channelDescription", "N/A"))
@@ -87,3 +93,30 @@ for post in latest_posts:
     print("Likes:", post["postLikes"])
     print("Comments:", post["postComments"],'\n')
     print(60 * "=", "\n")
+
+options = FirefoxOptions()
+options.add_argument("--headless")
+driver = webdriver.Firefox(options=options)
+driver.get("https://socialblade.com/youtube/c/"+nameYtber)
+Links = {'youtube' : None, 'instagram' : None, 'facebook' : None, 'tiktok' : None, 'twitter' : None}
+for i in range(1,10):
+    try:
+        button = driver.find_element(By.CSS_SELECTOR, f"#YouTubeUserTopSocial > div:nth-child({i}) > a")
+        link = button.get_attribute("href")
+        if 'youtube.com' in link:
+            Links['youtube'] = link
+        elif 'instagram.com' in link:
+            Links['instagram'] = link
+        elif 'facebook.com' in link:
+            Links['facebook'] = link
+        elif 'tiktok.com' in link:
+            Links['tiktok'] = link
+        elif 'twitter.com' in link:
+            Links['twitter'] = link
+    except NoSuchElementException:
+        # Arrêtez la boucle si l'élément n'est pas trouvé
+        break
+driver.quit()
+for l in list(Links.keys()):
+    if Links[l] != None:
+        print(Links[l])
