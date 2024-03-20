@@ -1,15 +1,17 @@
 api_key = "AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw"
 from googleapiclient.discovery import build
+from datetime import datetime
 
 youtube = build('youtube', 'v3', developerKey=api_key)
-#channelName = input("Quelle chaine YT cherches-tu ?\n")
+
 def getCreatorInfos(channelName):
     requestChannelName = youtube.search().list(q=channelName, part="snippet", type='channel', maxResults=1)
     resultChannel = requestChannelName.execute()
     channel_info = {}
 
     for channel in resultChannel['items']:
-        channel_info["channelDateOfCreation"] = channel['snippet']['publishedAt']
+
+        channel_info["channelDateOfCreation"] = formatDate(channel['snippet']['publishedAt'])
         channel_info["channelName"] = channel['snippet']['title']
         channel_info["channelDescription"] = channel['snippet']['description']
         channel_info["channelId"] = channel['snippet']['channelId']
@@ -28,17 +30,6 @@ def getCreatorInfos(channelName):
             channel_info["uploads"] = resultStats['items'][0]['statistics'].get('uploadCount', 0)
 
     return channel_info
-
-
-creator_info = getCreatorInfos('misterjday')
-print("Date de création de la chaîne:", creator_info.get("channelDateOfCreation", "N/A"))
-print("Nom de la chaîne:", creator_info.get("channelName", "N/A"))
-print("Description de la chaîne:", creator_info.get("channelDescription", "N/A"))
-print("Lien vers la photo de profil de la chaîne:", creator_info.get("channelProfilePicLink", "N/A"))
-print("Nombre de vues totales de la chaîne:", creator_info.get("viewCount", "N/A"))
-print("Nombre total d'abonnés à la chaîne:", creator_info.get("subscriberCount", "N/A"))
-print("Nombre total de vidéos mises en ligne:", creator_info.get("videoCount", "N/A"))
-print(50*"=","\n")
 def getLatestPosts(channelId, max_posts=3):
     requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=50)
     responseLatestPosts = requestLatestPosts.execute()
@@ -52,7 +43,7 @@ def getLatestPosts(channelId, max_posts=3):
             pass
         else:
             post_info = {}
-            post_info["postDate"] = video['snippet']['publishedAt']
+            post_info["postDate"] = formatDate(video['snippet']['publishedAt'])
             post_info["postTitle"] = video['snippet']['title']
             post_info["postPicture"] = video['snippet']['thumbnails']['standard']['url']
             post_info["postViews"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['viewCount']
@@ -69,6 +60,24 @@ def get_video_statistics(video_id):
     response = request.execute()
     return response['items'][0]['statistics']
 
+def formatDate(date):
+    dateObj = datetime.fromisoformat(date)
+    dateFormatee = dateObj.strftime("%d/%m/%Y")
+    return dateFormatee
+
+
+
+creator_info = getCreatorInfos('misterjday')
+print("Nom de la chaîne:", creator_info.get("channelName", "N/A"))
+print("Date de création de la chaîne:", creator_info.get("channelDateOfCreation", "N/A"))
+print("Description de la chaîne:", creator_info.get("channelDescription", "N/A"))
+print("Lien vers la photo de profil de la chaîne:", creator_info.get("channelProfilePicLink", "N/A"))
+print("Nombre de vues totales de la chaîne:", creator_info.get("viewCount", "N/A"))
+print("Nombre total d'abonnés à la chaîne:", creator_info.get("subscriberCount", "N/A"))
+print("Nombre total de vidéos mises en ligne:", creator_info.get("videoCount", "N/A"))
+print(50*"=","\n")
+
+
 latest_posts = getLatestPosts(channelId=creator_info["channelId"], max_posts=3)
 for post in latest_posts:
     print("Titre:", post["postTitle"])
@@ -77,5 +86,6 @@ for post in latest_posts:
     print("Vues:", post["postViews"])
     print("Likes:", post["postLikes"])
     print("Comments:", post["postComments"],'\n')
+
 
 
