@@ -36,8 +36,8 @@ def getCreatorInfos(channelName):
             channel_info["uploads"] = resultStats['items'][0]['statistics'].get('uploadCount', 0)
 
     return channel_info, nameYtber
-def getLatestPosts(channelId, max_posts=3):
-    requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=50)
+def getLatestPosts(channelId, max_posts):
+    requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=1000)
     responseLatestPosts = requestLatestPosts.execute()
     countUpload = 0
     latest_posts = []
@@ -48,17 +48,22 @@ def getLatestPosts(channelId, max_posts=3):
         if video['snippet']['type'] != 'upload':
             pass
         else:
-            post_info = {}
-            post_info["postDate"] = formatDate(video['snippet']['publishedAt'])
-            post_info["postTitle"] = video['snippet']['title']
-            post_info["postPicture"] = video['snippet']['thumbnails']['standard']['url']
-            post_info["postViews"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['viewCount']
-            post_info["postLikes"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['likeCount']
-            post_info["postComments"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['commentCount']
-            post_info["postDuration"] = get_video_duration(video['contentDetails']['upload']['videoId'])['duration']
-            latest_posts.append(post_info)
-            countUpload += 1
+            duration = get_video_duration(video['contentDetails']['upload']['videoId'])['duration']
+            if len(convertDuration(duration)) < 3:
+                pass
+            else:
+                post_info = {}
+                post_info["postDate"] = formatDate(video['snippet']['publishedAt'])
+                post_info["postTitle"] = video['snippet']['title']
+                post_info["postPicture"] = video['snippet']['thumbnails']['standard']['url']
+                post_info["postViews"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['viewCount']
+                post_info["postLikes"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['likeCount']
+                post_info["postComments"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['commentCount']
+                post_info["postDuration"] = convertDuration(duration)
+                latest_posts.append(post_info)
+                countUpload += 1
     return latest_posts
+
 def get_video_statistics(video_id):
     request = youtube.videos().list(
         part="statistics",
@@ -80,6 +85,10 @@ def formatDate(date):
     dateFormatee = dateObj.strftime("%d/%m/%Y")
     return dateFormatee
 
+def convertDuration(duration):
+    videoLenght = duration.replace("PT", "").replace("H", ":").replace("M", ":").replace("S", "")
+    return videoLenght
+
 nomCreateur = input("Entrez un nom de créateur :\n")
 print(30*"=","Créateur",30*"=","\n")
 creator_info, nameYtber = getCreatorInfos(nomCreateur)
@@ -90,10 +99,10 @@ print("Lien vers la photo de profil de la chaîne:", creator_info.get("channelPr
 print("Nombre de vues totales de la chaîne:", creator_info.get("viewCount", "N/A"))
 print("Nombre total d'abonnés à la chaîne:", creator_info.get("subscriberCount", "N/A"))
 print("Nombre total de vidéos mises en ligne:", creator_info.get("videoCount", "N/A"))
-print("\n",30*"=","3 Derniers Post",30*"=","\n")
+print("\n",30*"=","5 Derniers Post",30*"=","\n")
 
 
-latest_posts = getLatestPosts(channelId=creator_info["channelId"], max_posts=3)
+latest_posts = getLatestPosts(channelId=creator_info["channelId"], max_posts=5)
 for post in latest_posts:
     print("Titre:", post["postTitle"])
     print("Moment de parution:", post["postDate"])
