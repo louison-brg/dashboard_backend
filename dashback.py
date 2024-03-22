@@ -55,6 +55,7 @@ def getLatestPosts(channelId, max_posts=3):
             post_info["postViews"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['viewCount']
             post_info["postLikes"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['likeCount']
             post_info["postComments"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['commentCount']
+            post_info["postDuration"] = get_video_duration(video['contentDetails']['upload']['videoId'])['duration']
             latest_posts.append(post_info)
             countUpload += 1
     return latest_posts
@@ -65,6 +66,14 @@ def get_video_statistics(video_id):
     )
     response = request.execute()
     return response['items'][0]['statistics']
+
+def get_video_duration(video_id):
+    request = youtube.videos().list(
+        part="contentDetails",
+        id=video_id
+    )
+    response = request.execute()
+    return response['items'][0]['contentDetails']
 
 def formatDate(date):
     dateObj = datetime.fromisoformat(date)
@@ -91,7 +100,8 @@ for post in latest_posts:
     print("Miniature:", post["postPicture"])
     print("Vues:", post["postViews"])
     print("Likes:", post["postLikes"])
-    print("Comments:", post["postComments"],'\n')
+    print("Comments:", post["postComments"])
+    print("Duration:", post["postDuration"],'\n')
     print(60 * "=", "\n")
 
 options = FirefoxOptions()
