@@ -101,7 +101,6 @@ print("Nombre total d'abonnés à la chaîne:", creator_info.get("subscriberCoun
 print("Nombre total de vidéos mises en ligne:", creator_info.get("videoCount", "N/A"))
 print("\n",30*"=","5 Derniers Post",30*"=","\n")
 
-
 latest_posts = getLatestPosts(channelId=creator_info["channelId"], max_posts=5)
 for post in latest_posts:
     print("Titre:", post["postTitle"])
