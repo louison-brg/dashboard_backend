@@ -8,7 +8,8 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Initialisation de l'API YouTube avec votre clé API
-api_key = "AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM"
+api_key = "AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM"#Louison
+#api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'#pyves
 youtube = build('youtube', 'v3', developerKey=api_key)
 
 def formatDate(date):
