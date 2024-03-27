@@ -3,14 +3,22 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from googleapiclient.discovery import build
 from datetime import datetime
+from selenium.common.exceptions import NoSuchElementException
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
 # Initialisation de Flask
 app = Flask(__name__)
+# CORS pour permettre les requêtes cross-origin
+CORS(app)
 
 # Initialisation de l'API YouTube avec votre clé API
-api_key = "AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM"#Louison
-#api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'#pyves
+api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'  # pyves
+# api_key = 'AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM' #Louison
+# api_key = 'AIzaSyB-QmKyOgODjThs3XJjxW4glgkoYbO9Smc' #virgile
 youtube = build('youtube', 'v3', developerKey=api_key)
+
 
 def formatDate(date):
     """Formatte la date en format jour/mois/année."""
@@ -18,17 +26,20 @@ def formatDate(date):
     dateFormatee = dateObj.strftime("%d/%m/%Y")
     return dateFormatee
 
+
 def get_video_statistics(video_id):
     """Récupère les statistiques d'une vidéo spécifique."""
     request = youtube.videos().list(part="statistics", id=video_id)
     response = request.execute()
     return response['items'][0]['statistics']
 
+
 def get_video_duration(video_id):
     """Récupère la durée d'une vidéo spécifique."""
     request = youtube.videos().list(part="contentDetails", id=video_id)
     response = request.execute()
     return response['items'][0]['contentDetails']
+
 
 def convertDurationToSeconds(duration):
     """Convertit la durée ISO 8601 en secondes."""
@@ -40,39 +51,77 @@ def convertDurationToSeconds(duration):
     total_seconds = hours * 3600 + minutes * 60 + seconds
     return total_seconds
 
+
+def add_spaces_to_number(number):
+    """Ajoute des espaces tous les trois chiffres dans le nombre."""
+    return '{:,}'.format(number).replace(',', ' ')
+
+
 @app.route('/getCreatorInfos', methods=['GET'])
 def get_creator_infos():
-    """Récupère les informations d'un créateur à partir du nom de la chaîne."""
-    channelName = request.args.get('channelName')
-    if not channelName:
-        return jsonify({"error": "Le paramètre channelName est requis."}), 400
+    """Get information of a creator from the channel name."""
+    channel_name = request.args.get('channelName')
+    if not channel_name:
+        return jsonify({"error": "The channelName parameter is required."}), 400
 
-    requestChannelName = youtube.search().list(q=channelName, part="snippet", type='channel', maxResults=1)
-    resultChannel = requestChannelName.execute()
+    request_channel = youtube.search().list(q=channel_name, part="snippet", type='channel', maxResults=1)
+    result_channel = request_channel.execute()
     channel_info = {}
 
-    if resultChannel['items']:
-        channel = resultChannel['items'][0]
+    if result_channel['items']:
+        channel = result_channel['items'][0]
+        channel_id = channel['snippet']['channelId']
         channel_info = {
             "channelDateOfCreation": formatDate(channel['snippet']['publishedAt']),
             "channelName": channel['snippet']['title'],
             "channelDescription": channel['snippet']['description'],
-            "channelId": channel['snippet']['channelId'],
+            "channelId": channel_id,
             "channelProfilePicLink": channel['snippet']['thumbnails']['default']['url']
         }
 
-        requestChannelStats = youtube.channels().list(part="statistics", id=channel_info['channelId'])
-        resultStats = requestChannelStats.execute()
+        request_channel_stats = youtube.channels().list(part="statistics", id=channel_id)
+        result_stats = request_channel_stats.execute()
 
-        if 'statistics' in resultStats['items'][0]:
-            stats = resultStats['items'][0]['statistics']
+        if 'statistics' in result_stats['items'][0]:
+            stats = result_stats['items'][0]['statistics']
             channel_info.update({
-                "viewCount": stats.get('viewCount', 0),
-                "subscriberCount": stats.get('subscriberCount', 0),
-                "videoCount": stats.get('videoCount', 0)
+                "viewCount": add_spaces_to_number(int(stats.get('viewCount', 0))),
+                "subscriberCount": add_spaces_to_number(int(stats.get('subscriberCount', 0))),
+                "videoCount": add_spaces_to_number(int(stats.get('videoCount', 0)))
             })
 
+        social_links = get_social_links(channel_name)
+        channel_info.update(social_links)
+
     return jsonify(channel_info)
+
+
+@app.route('/getCreatorInfos', methods=['GET'])
+def get_social_links(channel_name):
+    options = FirefoxOptions()
+    options.add_argument("--headless")
+    driver = webdriver.Firefox(options=options)
+    driver.get("https://socialblade.com/youtube/c/" + channel_name)
+    links = {'youtube': None, 'instagram': None, 'facebook': None, 'tiktok': None, 'twitter': None}
+    for i in range(1, 5):
+        try:
+            button = driver.find_element(By.CSS_SELECTOR, f"#YouTubeUserTopSocial > div:nth-child({i}) > a")
+            link = button.get_attribute("href")
+            if 'youtube.com' in link:
+                links['youtube'] = link
+            elif 'instagram.com' in link:
+                links['instagram'] = link
+            elif 'facebook.com' in link:
+                links['facebook'] = link
+            elif 'tiktok.com' in link:
+                links['tiktok'] = link
+            elif 'twitter.com' in link:
+                links['twitter'] = link
+        except NoSuchElementException:
+            break
+    driver.quit()
+    return links
+
 
 @app.route('/getLatestPosts', methods=['GET'])
 def get_latest_posts():
@@ -101,18 +150,15 @@ def get_latest_posts():
                     "postDate": formatDate(video['snippet']['publishedAt']),
                     "postTitle": video['snippet']['title'],
                     "postPicture": video['snippet']['thumbnails'].get('standard', {}).get('url', ''),
-                    "postViews": videoStats.get('viewCount', '0'),
-                    "postLikes": videoStats.get('likeCount', '0'),
-                    "postComments": videoStats.get('commentCount', '0'),
+                    "postViews": add_spaces_to_number(int(videoStats.get('viewCount', '0'))),
+                    "postLikes": add_spaces_to_number(int(videoStats.get('likeCount', '0'))),
+                    "postComments": add_spaces_to_number(int(videoStats.get('commentCount', '0'))),
                     "postDuration": videoDetails['duration']  # Keeping the original format for display
                 })
 
     # Si moins de 5 vidéos sont trouvées, toutes seront retournées
     return jsonify(latest_posts)
 
-
-# CORS pour permettre les requêtes cross-origin
-CORS(app)
 
 if __name__ == '__main__':
     app.run(debug=True)
