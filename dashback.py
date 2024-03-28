@@ -90,7 +90,7 @@ def get_creator_infos():
                 "videoCount": add_spaces_to_number(int(stats.get('videoCount', 0)))
             })
 
-        social_links = get_social_links(channel_name)
+        social_links = get_social_links(channel_info["channelName"])
         channel_info.update(social_links)
 
     return jsonify(channel_info)
@@ -102,7 +102,7 @@ def get_social_links(channel_name):
     options.add_argument("--headless")
     driver = webdriver.Firefox(options=options)
     driver.get("https://socialblade.com/youtube/c/" + channel_name)
-    links = {'youtube': None, 'instagram': None, 'facebook': None, 'tiktok': None, 'twitter': None}
+    links = {'youtube': 'None', 'instagram': 'None', 'facebook': 'None', 'tiktok': 'None', 'twitter': 'None'}
     for i in range(1, 5):
         try:
             button = driver.find_element(By.CSS_SELECTOR, f"#YouTubeUserTopSocial > div:nth-child({i}) > a")
