@@ -112,7 +112,7 @@ def get_social_links(channel_name):
     options.add_argument("--headless")
     driver = webdriver.Firefox(options=options)
     driver.get("https://socialblade.com/youtube/c/" + channel_name)
-    links = {'youtube': 'None', 'instagram': 'None', 'facebook': 'None', 'tiktok': 'None', 'twitter': 'None'}
+    links = {'youtube': 'None', 'instagram': 'None', 'tiktok': 'None', 'twitter': 'None'}
     for i in range(1, 5):
         try:
             button = driver.find_element(By.CSS_SELECTOR, f"#YouTubeUserTopSocial > div:nth-child({i}) > a")
@@ -121,8 +121,6 @@ def get_social_links(channel_name):
                 links['youtube'] = link
             elif 'instagram.com' in link:
                 links['instagram'] = link
-            elif 'facebook.com' in link:
-                links['facebook'] = link
             elif 'tiktok.com' in link:
                 links['tiktok'] = link
             elif 'twitter.com' in link:
