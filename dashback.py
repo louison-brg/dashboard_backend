@@ -1,140 +1,173 @@
-from selenium.common import NoSuchElementException
-
-api_key = "AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw"
+import re
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from googleapiclient.discovery import build
 from datetime import datetime
+from selenium.common.exceptions import NoSuchElementException
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
+# Initialisation de Flask
+app = Flask(__name__)
+# CORS pour permettre les requêtes cross-origin
+CORS(app)
+
+# Initialisation de l'API YouTube avec votre clé API
+api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'  # pyves
+# api_key = 'AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM' #Louison
+# api_key = 'AIzaSyB-QmKyOgODjThs3XJjxW4glgkoYbO9Smc' #virgile
 youtube = build('youtube', 'v3', developerKey=api_key)
 
-def getCreatorInfos(channelName):
-    requestChannelName = youtube.search().list(q=channelName, part="snippet", type='channel', maxResults=1)
-    resultChannel = requestChannelName.execute()
-    channel_info = {}
-
-    for channel in resultChannel['items']:
-
-        channel_info["channelDateOfCreation"] = formatDate(channel['snippet']['publishedAt'])
-        channel_info["channelName"] = channel['snippet']['title']
-        nameYtber=channel_info["channelName"]
-        channel_info["channelDescription"] = channel['snippet']['description']
-        channel_info["channelId"] = channel['snippet']['channelId']
-        channel_info["channelProfilePicLink"] = channel['snippet']['thumbnails']['default']['url']
-
-        # Requête pour obtenir les statistiques de la chaîne
-        requestChannelStats = youtube.channels().list(part="statistics", id=channel_info['channelId'])
-        resultStats = requestChannelStats.execute()
-
-        # Ajout des statistiques à channel_info
-        if 'statistics' in resultStats['items'][0]:
-            channel_info["viewCount"] = resultStats['items'][0]['statistics'].get('viewCount', 0)
-            channel_info["subscriberCount"] = resultStats['items'][0]['statistics'].get('subscriberCount', 0)
-            channel_info["videoCount"] = resultStats['items'][0]['statistics'].get('videoCount', 0)
-            channel_info["likes"] = resultStats['items'][0]['statistics'].get('likeCount', 0)
-            channel_info["uploads"] = resultStats['items'][0]['statistics'].get('uploadCount', 0)
-
-    return channel_info, nameYtber
-def getLatestPosts(channelId, max_posts):
-    requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=1000)
-    responseLatestPosts = requestLatestPosts.execute()
-    countUpload = 0
-    latest_posts = []
-
-    for video in responseLatestPosts['items']:
-        if countUpload == max_posts:
-            break
-        if video['snippet']['type'] != 'upload':
-            pass
-        else:
-            duration = get_video_duration(video['contentDetails']['upload']['videoId'])['duration']
-            if len(convertDuration(duration)) < 3:
-                pass
-            else:
-                post_info = {}
-                post_info["postDate"] = formatDate(video['snippet']['publishedAt'])
-                post_info["postTitle"] = video['snippet']['title']
-                post_info["postPicture"] = video['snippet']['thumbnails']['standard']['url']
-                post_info["postViews"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['viewCount']
-                post_info["postLikes"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['likeCount']
-                post_info["postComments"] = get_video_statistics(video['contentDetails']['upload']['videoId'])['commentCount']
-                post_info["postDuration"] = convertDuration(duration)
-                latest_posts.append(post_info)
-                countUpload += 1
-    return latest_posts
-
-def get_video_statistics(video_id):
-    request = youtube.videos().list(
-        part="statistics",
-        id=video_id
-    )
-    response = request.execute()
-    return response['items'][0]['statistics']
-
-def get_video_duration(video_id):
-    request = youtube.videos().list(
-        part="contentDetails",
-        id=video_id
-    )
-    response = request.execute()
-    return response['items'][0]['contentDetails']
 
 def formatDate(date):
+    """Formatte la date en format jour/mois/année."""
     dateObj = datetime.fromisoformat(date)
     dateFormatee = dateObj.strftime("%d/%m/%Y")
     return dateFormatee
 
-def convertDuration(duration):
-    videoLenght = duration.replace("PT", "").replace("H", ":").replace("M", ":").replace("S", "")
-    return videoLenght
 
-nomCreateur = input("Entrez un nom de créateur :\n")
-print(30*"=","Créateur",30*"=","\n")
-creator_info, nameYtber = getCreatorInfos(nomCreateur)
-print("Nom de la chaîne:", creator_info.get("channelName", "N/A"))
-print("Date de création de la chaîne:", creator_info.get("channelDateOfCreation", "N/A"))
-print("Description de la chaîne:", creator_info.get("channelDescription", "N/A"))
-print("Lien vers la photo de profil de la chaîne:", creator_info.get("channelProfilePicLink", "N/A"))
-print("Nombre de vues totales de la chaîne:", creator_info.get("viewCount", "N/A"))
-print("Nombre total d'abonnés à la chaîne:", creator_info.get("subscriberCount", "N/A"))
-print("Nombre total de vidéos mises en ligne:", creator_info.get("videoCount", "N/A"))
-print("\n",30*"=","5 Derniers Post",30*"=","\n")
+def get_video_statistics(video_id):
+    """Récupère les statistiques d'une vidéo spécifique."""
+    request = youtube.videos().list(part="statistics", id=video_id)
+    response = request.execute()
+    return response['items'][0]['statistics']
 
-latest_posts = getLatestPosts(channelId=creator_info["channelId"], max_posts=5)
-for post in latest_posts:
-    print("Titre:", post["postTitle"])
-    print("Moment de parution:", post["postDate"])
-    print("Miniature:", post["postPicture"])
-    print("Vues:", post["postViews"])
-    print("Likes:", post["postLikes"])
-    print("Comments:", post["postComments"])
-    print("Duration:", post["postDuration"],'\n')
-    print(60 * "=", "\n")
 
-options = FirefoxOptions()
-options.add_argument("--headless")
-driver = webdriver.Firefox(options=options)
-driver.get("https://socialblade.com/youtube/c/"+nameYtber)
-Links = {'youtube' : None, 'instagram' : None, 'facebook' : None, 'tiktok' : None, 'twitter' : None}
-for i in range(1,10):
-    try:
-        button = driver.find_element(By.CSS_SELECTOR, f"#YouTubeUserTopSocial > div:nth-child({i}) > a")
-        link = button.get_attribute("href")
-        if 'youtube.com' in link:
-            Links['youtube'] = link
-        elif 'instagram.com' in link:
-            Links['instagram'] = link
-        elif 'facebook.com' in link:
-            Links['facebook'] = link
-        elif 'tiktok.com' in link:
-            Links['tiktok'] = link
-        elif 'twitter.com' in link:
-            Links['twitter'] = link
-    except NoSuchElementException:
-        # Arrêtez la boucle si l'élément n'est pas trouvé
-        break
-driver.quit()
-for l in list(Links.keys()):
-    if Links[l] != None:
-        print(Links[l])
+def get_video_duration(video_id):
+    """Récupère la durée d'une vidéo spécifique."""
+    request = youtube.videos().list(part="contentDetails", id=video_id)
+    response = request.execute()
+    return response['items'][0]['contentDetails']
+
+
+def convertDurationToSeconds(duration):
+    """Convertit la durée ISO 8601 en secondes."""
+    pattern = re.compile('PT(\d+H)?(\d+M)?(\d+S)?')
+    parts = pattern.match(duration)
+    hours = int(parts.group(1)[:-1]) if parts.group(1) else 0
+    minutes = int(parts.group(2)[:-1]) if parts.group(2) else 0
+    seconds = int(parts.group(3)[:-1]) if parts.group(3) else 0
+    total_seconds = hours * 3600 + minutes * 60 + seconds
+    return total_seconds
+
+def convertISOtoNormal(duration):
+    """Convertit la durée ISO 8601 en format 'xx:xx:xx'."""
+    pattern = re.compile('PT(\d+H)?(\d+M)?(\d+S)?')
+    parts = pattern.match(duration)
+    hours = int(parts.group(1)[:-1]) if parts.group(1) else 0
+    minutes = int(parts.group(2)[:-1]) if parts.group(2) else 0
+    seconds = int(parts.group(3)[:-1]) if parts.group(3) else 0
+    duration_formatted = "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+    return duration_formatted
+
+
+def add_spaces_to_number(number):
+    """Ajoute des espaces tous les trois chiffres dans le nombre."""
+    return '{:,}'.format(number).replace(',', ' ')
+
+
+@app.route('/getCreatorInfos', methods=['GET'])
+def get_creator_infos():
+    """Get information of a creator from the channel name."""
+    channel_name = request.args.get('channelName')
+    if not channel_name:
+        return jsonify({"error": "The channelName parameter is required."}), 400
+
+    request_channel = youtube.search().list(q=channel_name, part="snippet", type='channel', maxResults=1)
+    result_channel = request_channel.execute()
+    channel_info = {}
+
+    if result_channel['items']:
+        channel = result_channel['items'][0]
+        channel_id = channel['snippet']['channelId']
+        channel_info = {
+            "channelDateOfCreation": formatDate(channel['snippet']['publishedAt']),
+            "channelName": channel['snippet']['title'],
+            "channelDescription": channel['snippet']['description'],
+            "channelId": channel_id,
+            "channelProfilePicLink": channel['snippet']['thumbnails']['default']['url']
+        }
+
+        request_channel_stats = youtube.channels().list(part="statistics", id=channel_id)
+        result_stats = request_channel_stats.execute()
+
+        if 'statistics' in result_stats['items'][0]:
+            stats = result_stats['items'][0]['statistics']
+            channel_info.update({
+                "viewCount": add_spaces_to_number(int(stats.get('viewCount', 0))),
+                "subscriberCount": add_spaces_to_number(int(stats.get('subscriberCount', 0))),
+                "videoCount": add_spaces_to_number(int(stats.get('videoCount', 0)))
+            })
+
+        social_links = get_social_links(channel_info["channelName"])
+        channel_info.update(social_links)
+
+    return jsonify(channel_info)
+
+
+@app.route('/getCreatorInfos', methods=['GET'])
+def get_social_links(channel_name):
+    options = FirefoxOptions()
+    options.add_argument("--headless")
+    driver = webdriver.Firefox(options=options)
+    driver.get("https://socialblade.com/youtube/c/" + channel_name)
+    links = {'youtube': 'None', 'instagram': 'None', 'tiktok': 'None', 'twitter': 'None'}
+    for i in range(1, 5):
+        try:
+            button = driver.find_element(By.CSS_SELECTOR, f"#YouTubeUserTopSocial > div:nth-child({i}) > a")
+            link = button.get_attribute("href")
+            if 'youtube.com' in link:
+                links['youtube'] = link
+            elif 'instagram.com' in link:
+                links['instagram'] = link
+            elif 'tiktok.com' in link:
+                links['tiktok'] = link
+            elif 'twitter.com' in link:
+                links['twitter'] = link
+        except NoSuchElementException:
+            break
+    driver.quit()
+    return links
+
+
+@app.route('/getLatestPosts', methods=['GET'])
+def get_latest_posts():
+    """Récupère les 5 derniers posts d'une chaîne spécifique d'une durée supérieure à 60 secondes."""
+    channelId = request.args.get('channelId')
+    if not channelId:
+        return jsonify({"error": "Le paramètre channelId est requis."}), 400
+
+
+    # Augmente le nombre de résultats récupérés pour s'assurer d'obtenir suffisamment de vidéos de plus de 60 secondes
+    requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=50)
+    responseLatestPosts = requestLatestPosts.execute()
+    latest_posts = []
+
+    for video in responseLatestPosts['items']:
+        if len(latest_posts) >= 5:  # Stoppe la boucle une fois que 5 vidéos valides ont été trouvées
+            break
+
+        if video['snippet']['type'] == 'upload':
+            video_id = video['contentDetails']['upload']['videoId']
+            videoDetails = get_video_duration(video_id)
+            duration_seconds = convertDurationToSeconds(videoDetails['duration'])
+
+            if duration_seconds > 60:
+                videoStats = get_video_statistics(video_id)
+                latest_posts.append({
+                    "postDate": formatDate(video['snippet']['publishedAt']),
+                    "postTitle": video['snippet']['title'],
+                    "postPicture": video['snippet']['thumbnails'].get('standard', {}).get('url', ''),
+                    "postViews": add_spaces_to_number(int(videoStats.get('viewCount', '0'))),
+                    "postLikes": add_spaces_to_number(int(videoStats.get('likeCount', '0'))),
+                    "postComments": add_spaces_to_number(int(videoStats.get('commentCount', '0'))),
+                    "postDuration": convertISOtoNormal(videoDetails['duration'])
+                })
+
+    # Si moins de 5 vidéos sont trouvées, toutes seront retournées
+    return jsonify(latest_posts)
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
