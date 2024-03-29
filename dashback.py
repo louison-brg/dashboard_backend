@@ -51,6 +51,16 @@ def convertDurationToSeconds(duration):
     total_seconds = hours * 3600 + minutes * 60 + seconds
     return total_seconds
 
+def convertISOtoNormal(duration):
+    """Convertit la durée ISO 8601 en format 'xx:xx:xx'."""
+    pattern = re.compile('PT(\d+H)?(\d+M)?(\d+S)?')
+    parts = pattern.match(duration)
+    hours = int(parts.group(1)[:-1]) if parts.group(1) else 0
+    minutes = int(parts.group(2)[:-1]) if parts.group(2) else 0
+    seconds = int(parts.group(3)[:-1]) if parts.group(3) else 0
+    duration_formatted = "{:02d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+    return duration_formatted
+
 
 def add_spaces_to_number(number):
     """Ajoute des espaces tous les trois chiffres dans le nombre."""
@@ -153,7 +163,7 @@ def get_latest_posts():
                     "postViews": add_spaces_to_number(int(videoStats.get('viewCount', '0'))),
                     "postLikes": add_spaces_to_number(int(videoStats.get('likeCount', '0'))),
                     "postComments": add_spaces_to_number(int(videoStats.get('commentCount', '0'))),
-                    "postDuration": videoDetails['duration']  # Keeping the original format for display
+                    "postDuration": convertISOtoNormal(videoDetails['duration'])
                 })
 
     # Si moins de 5 vidéos sont trouvées, toutes seront retournées
@@ -162,3 +172,5 @@ def get_latest_posts():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
