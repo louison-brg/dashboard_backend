@@ -138,6 +138,7 @@ def get_latest_posts():
     if not channelId:
         return jsonify({"error": "Le paramètre channelId est requis."}), 400
 
+
     # Augmente le nombre de résultats récupérés pour s'assurer d'obtenir suffisamment de vidéos de plus de 60 secondes
     requestLatestPosts = youtube.activities().list(part="snippet,contentDetails", channelId=channelId, maxResults=50)
     responseLatestPosts = requestLatestPosts.execute()
@@ -170,5 +171,3 @@ def get_latest_posts():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
-
