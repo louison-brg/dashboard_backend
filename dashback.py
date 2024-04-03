@@ -86,7 +86,7 @@ def get_creator_infos():
             "channelName": channel['snippet']['title'],
             "channelDescription": channel['snippet']['description'],
             "channelId": channel_id,
-            "channelProfilePicLink": channel['snippet']['thumbnails']['default']['url']
+            "channelProfilePicLink": channel['snippet']['thumbnails']['high']['url']
         }
 
         request_channel_stats = youtube.channels().list(part="statistics", id=channel_id)
@@ -158,7 +158,7 @@ def get_latest_posts():
                 latest_posts.append({
                     "postDate": formatDate(video['snippet']['publishedAt']),
                     "postTitle": video['snippet']['title'],
-                    "postPicture": video['snippet']['thumbnails'].get('standard', {}).get('url', ''),
+                    "postPicture": video['snippet']['thumbnails'].get('high', {}).get('url', ''),
                     "postViews": add_spaces_to_number(int(videoStats.get('viewCount', '0'))),
                     "postLikes": add_spaces_to_number(int(videoStats.get('likeCount', '0'))),
                     "postComments": add_spaces_to_number(int(videoStats.get('commentCount', '0'))),
