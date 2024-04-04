@@ -14,9 +14,9 @@ app = Flask(__name__)
 CORS(app)
 
 # Initialisation de l'API YouTube avec votre clé API
-#api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'  # pyves
+api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'  # pyves
 # api_key = 'AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM' #Louison
-api_key = 'AIzaSyB-QmKyOgODjThs3XJjxW4glgkoYbO9Smc' #virgile
+# api_key = 'AIzaSyB-QmKyOgODjThs3XJjxW4glgkoYbO9Smc' #virgile
 youtube = build('youtube', 'v3', developerKey=api_key)
 
 
