@@ -14,8 +14,8 @@ app = Flask(__name__)
 CORS(app)
 
 # Initialisation de l'API YouTube avec votre clé API
-api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'  # pyves
-# api_key = 'AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM' #Louison
+# api_key = 'AIzaSyCCWBjLdTBnOIF7bXSfhj73BYcY_195iGw'  # pyves
+api_key = 'AIzaSyD3XbQ_CpaN235MAzZOCrhGwErUp0eRQnM' #Louison
 # api_key = 'AIzaSyB-QmKyOgODjThs3XJjxW4glgkoYbO9Smc' #virgile
 youtube = build('youtube', 'v3', developerKey=api_key)
 
@@ -156,6 +156,7 @@ def get_latest_posts():
             if duration_seconds > 60:
                 videoStats = get_video_statistics(video_id)
                 latest_posts.append({
+                    "videoId": video_id,
                     "postDate": formatDate(video['snippet']['publishedAt']),
                     "postTitle": video['snippet']['title'],
                     "postPicture": video['snippet']['thumbnails'].get('high', {}).get('url', ''),
